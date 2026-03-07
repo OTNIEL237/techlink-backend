@@ -3,24 +3,24 @@ const cors = require('cors');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-const aiRoutes = require('./modules/ai/ai.routes');
-
 const app = express();
 
-// Initialiser Supabase avec les variables d'environnement
+// ✅ Middleware EN PREMIER
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+// Supabase
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const missionRoutes = require('./modules/missions/mission.routes');
-app.use('/api/missions', missionRoutes);
-
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-
 // Routes
+const aiRoutes = require('./modules/ai/ai.routes');
+const missionRoutes = require('./modules/missions/mission.routes');
+
 app.use('/api/ai', aiRoutes);
+app.use('/api/missions', missionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -28,18 +28,15 @@ app.get('/health', (req, res) => {
 });
 
 // Webhook NotchPay
-app.post('/notchpay/callback', express.json(), async (req, res) => {
+app.post('/notchpay/callback', async (req, res) => {
   try {
     const { event, data } = req.body;
     console.log('NotchPay webhook:', event, data);
 
     if (event === 'payment.complete' || event === 'payment.success') {
-      const reference = data?.transaction?.reference;
       const missionId = data?.transaction?.metadata?.mission_id;
-      const amount = data?.transaction?.amount;
-
+      
       if (missionId) {
-        // Mettre à jour la mission
         await supabase
           .from('missions')
           .update({
@@ -48,7 +45,7 @@ app.post('/notchpay/callback', express.json(), async (req, res) => {
           })
           .eq('id', missionId);
 
-        console.log(`Mission ${missionId} marquée comme payée`);
+        console.log(`✅ Mission ${missionId} payée`);
       }
     }
 
@@ -59,10 +56,9 @@ app.post('/notchpay/callback', express.json(), async (req, res) => {
   }
 });
 
-// Gestion erreurs globale
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Erreur serveur', details: err.message });
+  res.status(500).json({ error: 'Erreur serveur' });
 });
 
 const PORT = process.env.PORT || 3000;

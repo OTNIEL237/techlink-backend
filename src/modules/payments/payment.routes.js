@@ -97,10 +97,10 @@ router.post('/initialize', async (req, res) => {
         client_id: clientId,
         technician_id: mission.technician_id,
         amount: amount,
-        technician_amount: amount, // 100% - no commission
-        platform_fee: 0, // No commission
-        commission_amount: 0, // No commission
-        commission_percentage: 0, // Explicitly set to 0
+        technician_amount: amount > 25 ? amount - 25 : amount,
+        platform_fee: amount > 25 ? 25 : 0,
+        commission_amount: amount > 25 ? 25 : 0,
+        commission_percentage: 0,
         method: 'camerpay',
         status: 'pending',
         payout_status: 'pending',
@@ -306,9 +306,9 @@ router.post('/manual/initialize', async (req, res) => {
         client_id: clientId,
         technician_id: mission.technician_id,
         amount: amount,
-        technician_amount: amount, // 100% - no commission
-        platform_fee: 0,
-        commission_amount: 0,
+        technician_amount: amount > 25 ? amount - 25 : amount,
+        platform_fee: amount > 25 ? 25 : 0,
+        commission_amount: amount > 25 ? 25 : 0,
         commission_percentage: 0,
         method: method, // 'mtn' or 'orange'
         status: 'pending',
@@ -393,7 +393,7 @@ router.post('/manual/confirm', async (req, res) => {
     let technicianId = null;
 
     if (payment) {
-      paymentAmount = payment.amount;
+      paymentAmount = payment.technician_amount || payment.amount;
       paymentRef = payment.camerpay_reference;
       technicianId = payment.technician_id;
 
@@ -427,7 +427,8 @@ router.post('/manual/confirm', async (req, res) => {
 
       if (mission) {
         technicianId = mission.technician_id;
-        paymentAmount = quote ? quote.subtotal : 0;
+        let baseAmount = quote ? quote.subtotal : 0;
+        paymentAmount = baseAmount > 25 ? baseAmount - 25 : baseAmount;
       }
     }
 

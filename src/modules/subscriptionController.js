@@ -102,9 +102,15 @@ class SubscriptionController {
       const pricing = CAMERPAY_CONFIG.subscriptions[subscriptionType];
       const reference = camerpayService.generateReference('SUB', resolvedId);
 
+      // Pour les tests, limiter le montant à 20 FCFA maximum
+      let finalAmount = pricing.amount;
+      if (finalAmount > 20) {
+        finalAmount = 20;
+      }
+
       const paymentResult = await camerpayService.initializePayment({
         type: 'subscription',
-        amount: pricing.amount,
+        amount: finalAmount,
         description: `${pricing.label} - ${name}`,
         clientId: resolvedId,
         clientPhone: phone,
